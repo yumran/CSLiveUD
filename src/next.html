@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>版本升级</title>
+    <link rel="stylesheet" href="./static/css/index.css">
+  </head>
+  
+  <body>
+    <div class="box">
+        <!-- 升级完成 -->
+        <div id="up_success" class="up_inner up_success" style="display: none;">
+            <img src="./static/img/up_success.png">
+            <p>升级完成</p>
+        </div>
+
+        <!-- 升级失败 -->
+        <div id="up_fail" class="up_inner up_fail"  style="display: none;">
+            <img src="./static/img/up_fail.png">
+            <p>升级失败</p>
+        </div>
+
+        <!-- 关闭 -->
+        <div class="up_close">
+            <span>关闭</span>
+        </div>
+    </div>
+
+    <!-- JS -->
+    <script charset="utf-8">
+      $(document).ready(function(){
+        if (upgrade_progress == 100) {
+          document.getElementById("up_success").style.display = 'block';
+        } else {
+          document.getElementById("up_fail").style.display = "block";
+        }
+      });
+    </script>
+
+  </body>
+</html>

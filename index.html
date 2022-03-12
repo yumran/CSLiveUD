@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'"> -->
+    <!-- <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'"> -->
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+    <title>版本升级</title>
+    
+    <link rel="stylesheet" href="./static/css/index.css">
+    <link rel="stylesheet" href="./static/layui/css/layui.css">
+    
+  </head>
+  
+  <body>
+
+    <div class="box">
+      <div class="box-top">
+        <span>版本升级</span>
+      </div>
+
+      <div id="box-main" class="box-main">
+        <div class="box-main-load">
+          <img class="box-main-load-img" src="./static/img/load.png">
+          <span>安装中...</span>
+        </div>
+        <div class="box-main-progress">
+          <div class="layui-progress layui-progress-big" lay-showPercent="true" lay-filter="demo">
+            <div class="layui-progress-bar layui-bg-blue" lay-percent="0%"></div>
+          </div>
+        </div>
+        
+        <!-- <button onclick="down()">下载</button> -->
+        <!-- <button onclick="exe_bat()">脚本</button> -->
+        <!-- <a href="http://searchbox.bj.bcebos.com/miniapp/demo-1.0.1.zip">下载小程序示例源码</a> -->
+        <!-- <el-progress :text-inside="true" :stroke-width="26" :percentage="70"></el-progress> -->
+      </div>
+    </div>
+    <!-- 您也可以此进程中运行其他文件 -->
+    <!-- <script src="./renderer.js"></script> -->
+    <script src="./static/js/index.js"></script>
+    <script src="./static/layui/layui.js" charset="utf-8"></script>
+    <script src="./static/js/jquery-3.5.1.min.js" charset="utf-8"></script>
+    <script>
+    
+      var progressInterval = null;
+      var upgrade_result = true;
+      $(document).ready(function(){
+          //页面加载
+          console.log("init....");
+          upgrade_progress = 0;
+          // 初始化 && 控制流程
+          upgrade_result = init_controller();
+      });
+
+      // 设置版本升级的进度条
+      layui.use('element', function() {
+        element = layui.element;
+        progressInterval = setInterval(() => {
+          if (!upgrade_result) {
+            clearInterval(progressInterval);
+            sleepFun(fun("./src/next_bak.html?flag=fail"), 2000);
+          } else {
+            if (upgrade_progress < 100) {
+              var temp = upgrade_progress + Math.floor((Math.random()*10)+1);
+              if (temp < 100) {
+                upgrade_progress = temp
+                element.progress('demo', upgrade_progress+'%');
+              }
+            } else {
+              element.progress('demo', upgrade_progress+'%');
+              clearInterval(progressInterval);
+              sleepFun(fun("./src/next_bak.html?flag=success"), 2000);
+            }
+          }
+        }, 2000);
+      });
+
+      // sleep
+      let fun = function(url) {
+        console.log('time out');
+        window.location.href = url;
+      };
+      let sleepFun = function(fun, time) {
+        setTimeout(function() {
+          fun(url);
+        }, time);
+      };
+    </script>
+  </body>
+</html>

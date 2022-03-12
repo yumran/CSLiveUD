@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'"> -->
+    <!-- <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'"> -->
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+
+    <title>版本升级</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+  </head>
+  
+  <body onload="init()">
+    <div class="box">
+        <div class="box-top">
+          <span>版本升级</span>
+        </div>
+
+        <!-- 升级完成 -->
+        <div id="up_success" class="up_inner up_success" style="display: none;">
+            <img src="../static/img/up_success.png">
+            <p>升级完成</p>
+        </div>
+
+        <!-- 升级失败 -->
+        <div id="up_fail" class="up_inner up_fail"  style="display: none;">
+            <img src="../static/img/up_fail.png">
+            <p>升级失败</p>
+        </div>
+
+        <!-- 关闭 -->
+        <div class="up_close" onclick="up_close()">
+            <span>关闭</span>
+        </div>
+
+    </div>
+    <!-- 您也可以此进程中运行其他文件 -->
+    <!-- <script src="./renderer.js"></script> -->
+    <script type="text/javascript" src="../static/js/index.js" charset="utf-8"></script>
+    <!-- JS -->
+    <script type="text/javascript">
+
+      function init() {
+        // 初始化内容 
+        var url = document.location.href;
+        var flag = url.split('=')[1];
+        if (flag == 'success') {
+          document.getElementById("up_success").style.display = 'block';
+        } else {
+          document.getElementById("up_fail").style.display = "block";
+        }
+      };
+    </script>
+  </body>
+</html>
