@@ -1,7 +1,9 @@
-
+let sleep_time = 1000;
 
 // 更新进度
+let upgrade_result = true;
 let upgrade_progress = 0;
+let upgrade_flag_number = 0;
 
 const ipcRenderer = window.require('electron').ipcRenderer;
 function init() {

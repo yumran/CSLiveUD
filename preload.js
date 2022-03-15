@@ -1,3 +1,5 @@
+const { async } = require("node-stream-zip");
+
 const { exists } = window.require("fs");
 const moment = window.require('moment');
 
@@ -14,7 +16,7 @@ var fs = window.require('fs');
 // 解压
 const compressing = window.require('compressing');
 // 执行脚本
-const { exec, spawn } = window.require('child_process');
+const { exec, spawn, spawnSync} = window.require('child_process');
 
 // 所有Node.js API都可以在预加载过程中使用。
 // 它拥有与Chrome扩展一样的沙盒。
@@ -42,31 +44,70 @@ window.addEventListener('DOMContentLoaded', () => {
 // 7、清理安装包
 // 8、完成
 
+
 // 1、初始化升级程序
 window.init_controller = function() {
   const app = remote.app
   console.log(path.join(__dirname))
-  debugger
   console.log(remote.process.argv)
+
   console.log(app.getPath("downloads"))
   // var argv1 = remote.process.argv[app.isPackaged ? 1 : 2];
   if (remote.process.argv.length == (app.isPackaged ? 1 : 2)) {
     // 未通知升级包的绝对路径 && 默认客户端
     var zipFilePath = path.join(app.getPath("downloads"), "upgrade.zip");
-    return upgrade(zipFilePath, 1);
+    upgrade_result =  upgrade(zipFilePath, 1);
   } else if (remote.process.argv.length == (app.isPackaged ? 2 : 3)) {
     // 通知升级包的名字 && 默认客户端
     var zipFileName = remote.process.argv[app.isPackaged ? 1 : 2];
     var zipFilePath = path.join(app.getPath("downloads"), zipFileName);
-    return upgrade(zipFilePath, 1);
+    upgrade_result =  upgrade(zipFilePath, 1);
   } else if (remote.process.argv.length == (app.isPackaged ? 3 : 4)){
     // 通知升级包的名字 && 通知系统类型
     var zipFileName = remote.process.argv[app.isPackaged ? 1 : 2];
     var zipFilePath = path.join(app.getPath("downloads"), zipFileName);
     var systemType = remote.process.argv[app.isPackaged ? 2 : 3];
-    return upgrade(zipFilePath, systemType);
+    upgrade_result =  upgrade(zipFilePath, systemType);
   } 
 };
+
+
+/**
+ * 升级失败的回滚控制
+ * 1、卸载脚本
+ * 2、还原备份文件
+ * 3、安装脚本
+ */
+window.rollback_controller = function() {
+
+  if (upgrade_flag_number >= 4) {
+    // 1、执行卸载脚本
+    if (!uninstall_original_program('uninstall.bat', 2)) {
+      return false;
+    }
+    console.log("uninstall_original_program end !!")
+    async() => {
+      await sleep_and_await(sleep_time);
+    }
+
+    // 2、还原备份文件
+    if (!rollback_source_program()) {
+      return false;
+    }
+    console.log("backup_source_program end !!")
+
+    // 3、安装脚本
+    if (!install_upgrade_program('install.bat', 7)) {
+      return false;
+    }
+    console.log("install_upgrade_program end !!")
+    async() => {
+      await sleep_and_await(sleep_time);
+    }
+  }
+  return true;
+};
+
 
 
 // 2、正式的升级逻辑
@@ -75,69 +116,83 @@ window.upgrade = function(zipFilePath, systemType) {
   if (!check_upgrade_package(zipFilePath, systemType)) {
     return false;
   }
+  upgrade_flag_number = 1;
   console.log("check_upgrade_package end !!")
-
+  async() => {
+    await sleep_and_await(sleep_time);
+  }
+  
   // 2、卸载原程序
-  if (!uninstall_original_program('upgrade.bat', 2)) {
+  if (!uninstall_original_program('uninstall.bat', 2)) {
     return false;
   }
+  upgrade_flag_number = 2;
   console.log("uninstall_original_program end !!")
+  async() => {
+    await sleep_and_await(sleep_time);
+  }
 
   // 3、备份原程序
   if (!backup_source_program(systemType)) {
     return false;
   }
+  upgrade_flag_number = 3;
   console.log("backup_source_program end !!")
 
   // 4、解压升级包 && 覆盖原程序
   if (!unzip_upgrade_package(zipFilePath, systemType)) {
     return false;
   }
+  upgrade_flag_number = 4;
   console.log("unzip_upgrade_package end !!")
 
-  
   // 5、安装升级程序
-  if (!install_upgrade_program('upgrade.bat', 7)) {
+  if (!install_upgrade_program('install.bat', 7)) {
     return false;
   }
+  upgrade_flag_number = 5;
   console.log("install_upgrade_program end !!")
+  async() => {
+    await sleep_and_await(sleep_time);
+  }
 
   // 6、清理升级包
   if (!clear_upgrade_packege(zipFilePath)) {
-    return falsel;
+    return false;
+  }
+  upgrade_flag_number = 6;
+  async() => {
+    await sleep_and_await(sleep_time);
   }
   console.log("clear_upgrade_packege end !!")
+  upgrade_progress = 100;
   return true;
 }
 
 
-
 /** 检查升级包是否存在 */
 window.check_upgrade_package = function(zipFilePath, systemType) {
-
-  fs.exists(zipFilePath, function(exist) {
-    if (!exist) {
-      console.log("版本升级包不存在！！");
-      return false;
-    }
-    return true;
-  });
+  var exist = fs.existsSync(zipFilePath);
+  if (!exist) {
+    console.log("版本升级包不存在！！");
+  }
+  return exist
 };
 
 
 /** 卸载原程序 or 服务 */
 window.uninstall_original_program = function(batFileName, args) {
-
+  const app = remote.app
   let batFilePath = path.join(app.getAppPath(), '../../../../', batFileName)
 
-  fs.exists(batFilePath, function(exist) {
-    if (!exist) {
-      console.log("脚本文件%s不存在！！", batFilePath);
-      return false;
-    }
-    // 执行卸载脚本
-    return execute_script_file(batFilePath, args);
-  }); 
+  console.log("bat file path:" + batFilePath);
+  var exist = fs.existsSync(batFilePath);
+  if (!exist) {
+    console.log("脚本文件%s不存在！！", batFilePath);
+    return false;
+  }
+  // 执行卸载脚本
+  return execute_script_file(batFilePath, args);
 };
 
 /**
@@ -145,28 +200,13 @@ window.uninstall_original_program = function(batFileName, args) {
  * @param {命令} command 
  */
 window.execute_script = function(command) {
-  let bat = spawn('cmd.exe', ['/c', command]);
-  // handle normal output
-  bat.stdout.on('data', (data) => {
-    var str = String.fromCharCode.apply(null, data);
-    console.log(str);
-  });
 
-  // Handle error output
-  bat.stderr.on('data', (data) => {
-    var str = String.fromCharCode.apply(null, data);
-    console.error(str);
-  });
+  let bat = spawnSync('cmd.exe', ['/c', command]);
 
-  // Handle on exit event
-  bat.on('exit', (code) => {
-    console.log(`Child exited with code ${code}`);
-    if (code === 0) {
-      return true;
-    }
+  if (bat.status != 0) {
     return false;
-  });
-
+  }
+  return true;
 }
 
 /**
@@ -175,31 +215,15 @@ window.execute_script = function(command) {
  * @param {参数} args 
  */
 window.execute_script_file = function(batFilePath, args) {
-  let bat = spawn('cmd.exe', ['/c', batFilePath]);
+
+  let bat = spawnSync('cmd.exe', ['/c', batFilePath]);
   if(batFilePath.includes('upgrade')) {
-    bat = spawn('cmd.exe', ['/c', batFilePath, args]);
+    bat = spawnSync('cmd.exe', ['/c', batFilePath, args]);
   }
-
-  // handle normal output
-  bat.stdout.on('data', (data) => {
-    var str = String.fromCharCode.apply(null, data);
-    console.log(str);
-  });
-
-  // Handle error output
-  bat.stderr.on('data', (data) => {
-    var str = String.fromCharCode.apply(null, data);
-    console.error(str);
-  });
-
-  // Handle on exit event
-  bat.on('exit', (code) => {
-    console.log(`Child exited with code ${code}`);
-    if (code === 0) {
-      return true;
-    }
+  if (bat.status != 0) {
     return false;
-  });
+  }
+  return true;
 };
 
 /**
@@ -207,19 +231,43 @@ window.execute_script_file = function(batFilePath, args) {
  */
 window.backup_source_program = function(systemType) {
   var command = "";
+  var app = remote.app
   var date = moment().format('YYYY_MM_DD');
-  var source_path = path.join(app.getAppPath(), '../../../../');
-  if (systemType == 1) {
-    temp_path = path.join(path.getPath("temp"), 'EDA_WIN_bak');
+  var source_path = path.join(app.getAppPath(), '../../../..');
+  if (systemType == 1) {  //客户端
+    temp_path = path.join(source_path, "../", 'EDA_WIN_bak');
+    // temp_path = path.join(app.getPath("temp"), 'EDA_WIN_bak');
     // temp_path = path.join(path.getPath("temp"), 'EDA_WIN'+"_" + date);
   } else {
-    temp_path = path.join(path.getPath("temp"), 'EDA_BS_WIN_bak');
+    temp_path = path.join(source_path, '../', 'EDA_BS_WIN_bak');
+    // temp_path = path.join(app.getPath("temp"), 'EDA_BS_WIN_bak');
     // temp_path = path.join(path.getPath("temp"), 'EDA_BS_WIN'+"_" + date);
   }
+  var noCopyFile = path.join(source_path, 'dist', 'win-csliveud', 'uncopy.txt');
   console.log("source_path:%s, temp_path:%s", source_path, temp_path);
-  command = "xcopy " + source_path + " " + temp_path + " /E/Y/C/I";
+  command = "xcopy " + source_path + " " + temp_path + " /E/Y/C/I /EXCLUDE:" + noCopyFile;
   return execute_script(command);
 };
+
+/**
+ * 还原原程序
+ */
+window.rollback_source_program = function() {
+  var command = "";
+  var app = remote.app
+  var date = moment().format('YYYY_MM_DD');
+  var systemType = remote.process.argv[app.isPackaged ? 2 : 3];
+ 
+  var dst_path = path.join(app.getAppPath(), '../../../..');
+  if (systemType == 1) {  //客户端
+    src_path = path.join(dst_path, "../", 'EDA_WIN_bak');
+  } else {
+    src_path = path.join(dst_path, '../', 'EDA_BS_WIN_bak');
+  }
+  console.log("src_path:%s, dst_path:%s", src_path, dst_path);
+  command = "xcopy " + src_path + " " + dst_path + " /E/Y/C/I";
+  return execute_script(command);
+}
 
 
 /**
@@ -228,17 +276,43 @@ window.backup_source_program = function(systemType) {
  * @param {系统类型} systemType 
  */
 window.unzip_upgrade_package = function(zipFilePath, systemType) {
-  var source_path = path.join(app.getAppPath(), '../../../../');
+  var app = remote.app
+  
+  var source_path = app.getAppPath();
+  var zip_exe_path = app.getAppPath();
+  if (source_path.includes('resources')) {
+    zip_exe_path = path.join(source_path, '../../', '7z.exe');
+    source_path = path.join(source_path, '../../../../..');
+  }
+
   // 解压缩
-  compressing.zip.uncompress(zipFilePath, source_path, {
-    zipFileNameEncoding: 'GBK'
-  }).then(() => {
-    console.log('unzip upgrade packege success !!');
-    return true;
-  }).catch(err => {
-    console.error(err);
+  try {
+    var commond = zip_exe_path + " x " + " -y " + zipFilePath + " -o" + source_path;
+    return execute_script(commond);
+  } catch (error) {
+    console.error(error);
     return false;
-  });
+  }
+
+
+  // try {
+  //   zipper.sync.unzip(zipFilePath, source_path);
+  // } catch (error) {
+  //   console.error(error);
+  //   return false;
+  // }
+  // return true;
+  
+
+  // compressing.zip.uncompress(zipFilePath, source_path, {zipFileNameEncoding: 'GBK'}).then(callback(true)).catch(callback(false));
+  // try {
+  //   await compressing.zip.uncompress(zipFilePath, source_path, {zipFileNameEncoding: 'GBK'})
+  //   console.log('unzip upgrade packege success !!');
+  // } catch (error) {
+  //   console.error(error);
+  //   return false;
+  // }
+  // return true;
 };
 
 
@@ -248,16 +322,16 @@ window.unzip_upgrade_package = function(zipFilePath, systemType) {
  * @param {*} args 
  */
 window.install_upgrade_program = function(batFileName, args) {
+  const app = remote.app
   let batFilePath = path.join(app.getAppPath(), '../../../../', batFileName)
-
-  fs.exists(batFilePath, function(exist) {
-    if (!exist) {
-      console.log("脚本文件%s不存在！！", batFilePath);
-      return false;
-    }
-    // 执行卸载脚本
-    return execute_script_file(batFilePath, args);
-  }); 
+  console.log("bat file path:" + batFilePath);
+  var exist = fs.existsSync(batFilePath);
+  if (!exist) {
+    console.log("脚本文件%s不存在！！", batFilePath);
+    return false;
+  }
+  // 执行卸载脚本
+  return execute_script_file(batFilePath, args);
 };
 
 /**
@@ -270,6 +344,12 @@ window.clear_upgrade_packege = function(zipFilePath) {
   return execute_script(command);
 }
 
+
+// 函数实现，参数单位 毫秒 ；
+// 以下代码来自于互联网，具体出处已经不记得了；
+async function sleep_and_await(ms) {
+  return new Promise(resolve => setTimeout(() => resolve(), ms));
+};
 
 
 // // 解压文件

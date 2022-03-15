@@ -36,6 +36,9 @@ function createWindow () {
   mainWindow.loadFile('index.html')
 
   // 打开开发工具
+  globalShortcut.register('CommandOrControl+Shift+i', function() {
+    mainWindow.webContents.openDevTools()
+  })
   mainWindow.webContents.openDevTools()
   
   // 下载文件的实现
@@ -97,7 +100,8 @@ app.on('window-all-closed', function () {
 // 在这个文件中，你可以包含应用程序剩余的所有部分的代码，
 // 也可以拆分成几个文件，然后用 require 导入。
 
-const { ipcMain } = require('electron')
+const { ipcMain } = require('electron');
+const { globalShortcut } = require('electron/main');
 
 ipcMain.on('download', (event, args) => {
   console.log("112213");

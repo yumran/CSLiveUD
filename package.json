@@ -29,7 +29,8 @@
     "moment": "^2.29.1",
     "node-stream-zip": "^1.15.0",
     "node-unzip-2": "^0.2.8",
-    "unzip": "^0.1.11"
+    "unzip": "^0.1.11",
+    "zip-local": "^0.3.5"
   },
   "config": {
     "forge": {

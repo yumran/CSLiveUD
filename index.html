@@ -13,7 +13,7 @@
     
   </head>
   
-  <body>
+  <body onload="load()">
 
     <div class="box">
       <div class="box-top">
@@ -43,22 +43,28 @@
     <script src="./static/layui/layui.js" charset="utf-8"></script>
     <script src="./static/js/jquery-3.5.1.min.js" charset="utf-8"></script>
     <script>
-    
       var progressInterval = null;
-      var upgrade_result = true;
-      $(document).ready(function(){
-          //页面加载
-          console.log("init....");
-          upgrade_progress = 0;
-          // 初始化 && 控制流程
-          upgrade_result = init_controller();
-      });
+
+      function load() {
+        //页面加载
+        upgrade_result = true;
+        upgrade_progress = 0;
+        upgrade_flag_number = 0;
+        console.log("init ......");
+        async_init_controller()
+        console.log("async end ......");
+      };
 
       // 设置版本升级的进度条
       layui.use('element', function() {
         element = layui.element;
         progressInterval = setInterval(() => {
           if (!upgrade_result) {
+            
+            // 版本回滚处理
+            console.log("upgrade_flag_number:" + upgrade_flag_number);
+            rollback_controller();
+
             clearInterval(progressInterval);
             sleepFun(fun("./src/next_bak.html?flag=fail"), 2000);
           } else {
@@ -76,6 +82,15 @@
           }
         }, 2000);
       });
+
+
+      // async function async_init_controller() { // 初始化 && 控制流程
+      //   await init_controller();
+      // }
+
+      function async_init_controller() { // 初始化 && 控制流程
+        setTimeout(init_controller, 2000);
+      }
 
       // sleep
       let fun = function(url) {
