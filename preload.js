@@ -95,8 +95,10 @@ window.rollback_controller = function() {
       return false;
     }
     console.log("backup_source_program end !!")
+  }
 
-    // 3、安装脚本
+  // 3、安装脚本
+  if (upgrade_flag_number >= 2) {
     if (!install_upgrade_program('install.bat', 7)) {
       return false;
     }
@@ -105,6 +107,7 @@ window.rollback_controller = function() {
       await sleep_and_await(sleep_time);
     }
   }
+  
   return true;
 };
 
