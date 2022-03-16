@@ -39,7 +39,7 @@ function createWindow () {
   globalShortcut.register('CommandOrControl+Shift+i', function() {
     mainWindow.webContents.openDevTools()
   })
-  mainWindow.webContents.openDevTools()
+  // mainWindow.webContents.openDevTools()
   
   // 下载文件的实现
   mainWindow.webContents.session.on('will-download', (event, item, webContents) => {
