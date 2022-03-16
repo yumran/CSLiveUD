@@ -18,6 +18,19 @@ const compressing = window.require('compressing');
 // 执行脚本
 const { exec, spawn, spawnSync} = window.require('child_process');
 
+const log = window.require('electron-log')
+// 日志文件等级，默认值：false
+log.transports.console.level = 'silly';
+// 日志格式，默认：[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}]{scope} {text}
+log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}]{scope} {text}';
+// 日志大小，默认：1048576（1M），达到最大上限后，备份文件并重命名为：main.old.log，有且仅有一个备份文件
+log.transports.file.maxSize = 1048576;
+
+log.info("")
+log.info("==========================")
+log.info("||      hello world     ||")
+log.info("==========================")
+
 // 所有Node.js API都可以在预加载过程中使用。
 // 它拥有与Chrome扩展一样的沙盒。
 window.addEventListener('DOMContentLoaded', () => {
@@ -48,10 +61,10 @@ window.addEventListener('DOMContentLoaded', () => {
 // 1、初始化升级程序
 window.init_controller = function() {
   const app = remote.app
-  console.log(path.join(__dirname))
-  console.log(remote.process.argv)
-
-  console.log(app.getPath("downloads"))
+  log.info("init controller ..... ")
+  log.info("init controller ..... " + " ===> dirname:" + path.join(__dirname))
+  log.info("init controller ..... " + " ===> download args:" + remote.process.argv)
+  log.info("init controller ..... " + " ===> download path:" + app.getPath("downloads"))
   // var argv1 = remote.process.argv[app.isPackaged ? 1 : 2];
   if (remote.process.argv.length == (app.isPackaged ? 1 : 2)) {
     // 未通知升级包的绝对路径 && 默认客户端
@@ -69,6 +82,7 @@ window.init_controller = function() {
     var systemType = remote.process.argv[app.isPackaged ? 2 : 3];
     upgrade_result =  upgrade(zipFilePath, systemType);
   } 
+  log.info("init controller ..... " + "===> end !!")
 };
 
 
@@ -79,13 +93,13 @@ window.init_controller = function() {
  * 3、安装脚本
  */
 window.rollback_controller = function() {
-
+  log.info("rollback controller ..... ")
   if (upgrade_flag_number >= 4) {
     // 1、执行卸载脚本
     if (!uninstall_original_program('uninstall.bat', 2)) {
       return false;
     }
-    console.log("uninstall_original_program end !!")
+    log.info("flag num:" + upgrade_flag_number + " ===> uninstall original program end !!")
     async() => {
       await sleep_and_await(sleep_time);
     }
@@ -94,7 +108,7 @@ window.rollback_controller = function() {
     if (!rollback_source_program()) {
       return false;
     }
-    console.log("backup_source_program end !!")
+    log.info("flag num:" + upgrade_flag_number + " ===> rollback source program end !!")
   }
 
   // 3、安装脚本
@@ -102,12 +116,12 @@ window.rollback_controller = function() {
     if (!install_upgrade_program('install.bat', 7)) {
       return false;
     }
-    console.log("install_upgrade_program end !!")
+    log.info("flag num:" + upgrade_flag_number + " ===> install upgrade program end !!")
     async() => {
       await sleep_and_await(sleep_time);
     }
   }
-  
+  log.info("rollback controller ..... " + " ===> end !!")
   return true;
 };
 
@@ -120,7 +134,7 @@ window.upgrade = function(zipFilePath, systemType) {
     return false;
   }
   upgrade_flag_number = 1;
-  console.log("check_upgrade_package end !!")
+  log.info("flag num:" + upgrade_flag_number + " ===> check upgrade package end !!")
   async() => {
     await sleep_and_await(sleep_time);
   }
@@ -130,7 +144,7 @@ window.upgrade = function(zipFilePath, systemType) {
     return false;
   }
   upgrade_flag_number = 2;
-  console.log("uninstall_original_program end !!")
+  log.info("flag num:" + upgrade_flag_number + " ===> uninstall original program end !!")
   async() => {
     await sleep_and_await(sleep_time);
   }
@@ -140,21 +154,21 @@ window.upgrade = function(zipFilePath, systemType) {
     return false;
   }
   upgrade_flag_number = 3;
-  console.log("backup_source_program end !!")
+  log.info("flag num:" + upgrade_flag_number + " ===> backup source program end !!")
 
   // 4、解压升级包 && 覆盖原程序
   if (!unzip_upgrade_package(zipFilePath, systemType)) {
     return false;
   }
   upgrade_flag_number = 4;
-  console.log("unzip_upgrade_package end !!")
+  log.info("flag num:" + upgrade_flag_number + " ===> unzip upgrade package end !!")
 
   // 5、安装升级程序
   if (!install_upgrade_program('install.bat', 7)) {
     return false;
   }
   upgrade_flag_number = 5;
-  console.log("install_upgrade_program end !!")
+  log.info("flag num:" + upgrade_flag_number + " ===> install upgrade program end !!")
   async() => {
     await sleep_and_await(sleep_time);
   }
@@ -164,10 +178,10 @@ window.upgrade = function(zipFilePath, systemType) {
     return false;
   }
   upgrade_flag_number = 6;
+  log.info("flag num:" + upgrade_flag_number + " ===> clear upgrade packege end !!")
   async() => {
     await sleep_and_await(sleep_time);
   }
-  console.log("clear_upgrade_packege end !!")
   upgrade_progress = 100;
   return true;
 }
@@ -178,7 +192,9 @@ window.check_upgrade_package = function(zipFilePath, systemType) {
   var exist = fs.existsSync(zipFilePath);
   if (!exist) {
     console.log("版本升级包不存在！！");
+    log.error("check ....." + " ==> " + zipFilePath + " 文件不存在 !!")
   }
+  log.info("check ....." + " ==> " + zipFilePath +  " 文件存在 !!")
   return exist
 };
 
@@ -187,13 +203,12 @@ window.check_upgrade_package = function(zipFilePath, systemType) {
 window.uninstall_original_program = function(batFileName, args) {
   const app = remote.app
   let batFilePath = path.join(app.getAppPath(), '../../../../', batFileName)
-
-  console.log("bat file path:" + batFilePath);
   var exist = fs.existsSync(batFilePath);
   if (!exist) {
-    console.log("脚本文件%s不存在！！", batFilePath);
+    log.info("uninstall ....." + " ==> " + batFilePath + " 文件不存在！！")
     return false;
   }
+  log.info("uninstall ....." + " ==> " + batFilePath +  " 文件存在 !!")
   // 执行卸载脚本
   return execute_script_file(batFilePath, args);
 };
@@ -203,7 +218,8 @@ window.uninstall_original_program = function(batFileName, args) {
  * @param {命令} command 
  */
 window.execute_script = function(command) {
-
+  log.info("execute .....")
+  log.info("execute ....." + " ===> command:" +  command);
   let bat = spawnSync('cmd.exe', ['/c', command]);
 
   if (bat.status != 0) {
@@ -218,7 +234,7 @@ window.execute_script = function(command) {
  * @param {参数} args 
  */
 window.execute_script_file = function(batFilePath, args) {
-
+  log.info("execute .....")
   let bat = spawnSync('cmd.exe', ['/c', batFilePath]);
   if(batFilePath.includes('upgrade')) {
     bat = spawnSync('cmd.exe', ['/c', batFilePath, args]);
@@ -233,6 +249,7 @@ window.execute_script_file = function(batFilePath, args) {
  * 备份原程序
  */
 window.backup_source_program = function(systemType) {
+  log.info("backup .....")
   var command = "";
   var app = remote.app
   var date = moment().format('YYYY_MM_DD');
@@ -247,7 +264,7 @@ window.backup_source_program = function(systemType) {
     // temp_path = path.join(path.getPath("temp"), 'EDA_BS_WIN'+"_" + date);
   }
   var noCopyFile = path.join(source_path, 'dist', 'win-csliveud', 'uncopy.txt');
-  console.log("source_path:%s, temp_path:%s", source_path, temp_path);
+  log.info("backup ....." + " ===> " + "src:" + temp_path + ", dst:" + source_path);
   command = "xcopy " + source_path + " " + temp_path + " /E/Y/C/I /EXCLUDE:" + noCopyFile;
   return execute_script(command);
 };
@@ -256,6 +273,7 @@ window.backup_source_program = function(systemType) {
  * 还原原程序
  */
 window.rollback_source_program = function() {
+  log.info("rollback .....")
   var command = "";
   var app = remote.app
   var date = moment().format('YYYY_MM_DD');
@@ -267,7 +285,7 @@ window.rollback_source_program = function() {
   } else {
     src_path = path.join(dst_path, '../', 'EDA_BS_WIN_bak');
   }
-  console.log("src_path:%s, dst_path:%s", src_path, dst_path);
+  log.info("rollback ....." + " ===> " + "src:" + src_path + ", dst:" + dst_path);
   command = "xcopy " + src_path + " " + dst_path + " /E/Y/C/I";
   return execute_script(command);
 }
@@ -279,8 +297,8 @@ window.rollback_source_program = function() {
  * @param {系统类型} systemType 
  */
 window.unzip_upgrade_package = function(zipFilePath, systemType) {
+  log.info("unzip .....")
   var app = remote.app
-  
   var source_path = app.getAppPath();
   var zip_exe_path = app.getAppPath();
   if (source_path.includes('resources')) {
@@ -325,14 +343,16 @@ window.unzip_upgrade_package = function(zipFilePath, systemType) {
  * @param {*} args 
  */
 window.install_upgrade_program = function(batFileName, args) {
+  log.info("install .....")
   const app = remote.app
   let batFilePath = path.join(app.getAppPath(), '../../../../', batFileName)
   console.log("bat file path:" + batFilePath);
   var exist = fs.existsSync(batFilePath);
   if (!exist) {
-    console.log("脚本文件%s不存在！！", batFilePath);
+    log.info("install ....." + " ==> " + batFilePath + " 文件不存在！！")
     return false;
   }
+  log.info("install ....." + " ==> " + batFilePath + " 文件存在！！")
   // 执行卸载脚本
   return execute_script_file(batFilePath, args);
 };
@@ -342,7 +362,8 @@ window.install_upgrade_program = function(batFileName, args) {
  * @param {*} zipFilePath 
  */
 window.clear_upgrade_packege = function(zipFilePath) {
-  console.log("zipFilePath:%s", zipFilePath);
+  log.info("clear .....")
+  console.log("clear ....." + " ===> " + zipFilePath);
   command = "del " + zipFilePath;
   return execute_script(command);
 }

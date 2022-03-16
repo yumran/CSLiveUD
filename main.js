@@ -2,7 +2,19 @@
 const electron = require('electron')
 const { app, BrowserWindow, Menu, screen, remote, shell} = electron
 const path = require('path')
+const log = require('electron-log')
 
+// 日志文件等级，默认值：false
+log.transports.console.level = 'silly';
+// 日志格式，默认：[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}]{scope} {text}
+log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}]{scope} {text}';
+// 日志大小，默认：1048576（1M），达到最大上限后，备份文件并重命名为：main.old.log，有且仅有一个备份文件
+log.transports.file.maxSize = 1048576;
+
+log.info("")
+log.info("==========================")
+log.info("||      hello world     ||")
+log.info("==========================")
 
 let mainWindow;
 function createWindow () {
@@ -49,7 +61,7 @@ function createWindow () {
     item.on('updated', (event, state) => {
       if (state === 'progressing') {
         if (!item.isPaused()) {
-          console.log(item.getFilename(), item.getReceivedBytes(), item.getTotalBytes());
+          log.info(item.getFilename(), item.getReceivedBytes(), item.getTotalBytes());
           if (mainWindow.isDestroyed()) {
             return;
           }
@@ -62,15 +74,15 @@ function createWindow () {
           mainWindow.setProgressBar(value);
         }
       } else if (state === 'interrupted') {
-        console.log("中断")
+        log.warn("download interrupte")
       }
     });
 
     item.on('done', (event, state) => {
       if (state === 'completed') {
-        console.log("完成")
+        log.info("download finish!!")
       } else if (state === 'cancelled') {
-        console.log("取消")
+        log.warn("download cancelle !! ")
       } else {
 
       }
