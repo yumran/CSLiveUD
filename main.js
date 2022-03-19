@@ -32,6 +32,7 @@ function createWindow () {
       nodeIntegration: true,
       contextIsolation: false,
       enableRemoteModule: true,
+      nodeIntegrationInWorker: true,
       preload: path.join(__dirname, 'preload.js'),
     }
   })

@@ -1,4 +1,5 @@
 const { async } = require("node-stream-zip");
+const { app } = require("electron");
 
 const { exists } = window.require("fs");
 const moment = window.require('moment');
@@ -8,7 +9,7 @@ const remote = window.require("@electron/remote");
 //引入 path 模块
 const path = window.require('path');
 //引入 文件操作 模块
-var fs = window.require('fs');
+const fs = window.require('fs');
 //引入 unzip 模块
 // var unzip = window.require('node-unzip-2');
 //引入 node-stream-zip 模块
@@ -96,7 +97,7 @@ window.rollback_controller = function() {
   log.info("rollback controller ..... ")
   if (upgrade_flag_number >= 4) {
     // 1、执行卸载脚本
-    if (!uninstall_original_program('uninstall.bat', 2)) {
+    if (!uninstall_original_program('uninstall.exe', 2)) {
       return false;
     }
     log.info("flag num:" + upgrade_flag_number + " ===> uninstall original program end !!")
@@ -113,7 +114,7 @@ window.rollback_controller = function() {
 
   // 3、安装脚本
   if (upgrade_flag_number >= 2) {
-    if (!install_upgrade_program('install.bat', 7)) {
+    if (!install_upgrade_program('install.exe', 7)) {
       return false;
     }
     log.info("flag num:" + upgrade_flag_number + " ===> install upgrade program end !!")
@@ -126,7 +127,6 @@ window.rollback_controller = function() {
 };
 
 
-
 // 2、正式的升级逻辑
 window.upgrade = function(zipFilePath, systemType) {
   // 1、检测升级包是否存在
@@ -134,16 +134,20 @@ window.upgrade = function(zipFilePath, systemType) {
     return false;
   }
   upgrade_flag_number = 1;
+  // upgrade_progress = upgrade_progress + 10 > 20 ? upgrade_progress : upgrade_progress + Math.floor((Math.random()*10)+1);
+  // checkout(upgrade_progress)
   log.info("flag num:" + upgrade_flag_number + " ===> check upgrade package end !!")
   async() => {
     await sleep_and_await(sleep_time);
   }
   
   // 2、卸载原程序
-  if (!uninstall_original_program('uninstall.bat', 2)) {
+  if (!uninstall_original_program('uninstall.exe', 2)) {
     return false;
   }
   upgrade_flag_number = 2;
+  // upgrade_progress = upgrade_progress + 20 > 40 ? upgrade_progress : upgrade_progress + Math.floor((Math.random()*20)+1);
+  // checkout(upgrade_progress)
   log.info("flag num:" + upgrade_flag_number + " ===> uninstall original program end !!")
   async() => {
     await sleep_and_await(sleep_time);
@@ -154,6 +158,8 @@ window.upgrade = function(zipFilePath, systemType) {
     return false;
   }
   upgrade_flag_number = 3;
+  // upgrade_progress = upgrade_progress + 20 > 60 ? upgrade_progress : upgrade_progress + Math.floor((Math.random()*20)+1);
+  // checkout(upgrade_progress)
   log.info("flag num:" + upgrade_flag_number + " ===> backup source program end !!")
 
   // 4、解压升级包 && 覆盖原程序
@@ -161,13 +167,17 @@ window.upgrade = function(zipFilePath, systemType) {
     return false;
   }
   upgrade_flag_number = 4;
+  // upgrade_progress = upgrade_progress + 20 > 80 ? upgrade_progress : upgrade_progress + Math.floor((Math.random()*20)+1);
+  // checkout(upgrade_progress)
   log.info("flag num:" + upgrade_flag_number + " ===> unzip upgrade package end !!")
 
   // 5、安装升级程序
-  if (!install_upgrade_program('install.bat', 7)) {
+  if (!install_upgrade_program('install.exe', 7)) {
     return false;
   }
   upgrade_flag_number = 5;
+  // upgrade_progress = upgrade_progress + 10 > 90 ? upgrade_progress : upgrade_progress + Math.floor((Math.random()*10)+1);
+  // checkout(upgrade_progress)
   log.info("flag num:" + upgrade_flag_number + " ===> install upgrade program end !!")
   async() => {
     await sleep_and_await(sleep_time);
@@ -178,11 +188,15 @@ window.upgrade = function(zipFilePath, systemType) {
     return false;
   }
   upgrade_flag_number = 6;
+  // upgrade_progress = upgrade_progress + 10 > 100 ? upgrade_progress : upgrade_progress + Math.floor((Math.random()*10)-1);
+  // checkout(upgrade_progress)
   log.info("flag num:" + upgrade_flag_number + " ===> clear upgrade packege end !!")
   async() => {
     await sleep_and_await(sleep_time);
   }
-  upgrade_progress = 100;
+
+  upgrade_success = true;
+
   return true;
 }
 
@@ -193,8 +207,9 @@ window.check_upgrade_package = function(zipFilePath, systemType) {
   if (!exist) {
     console.log("版本升级包不存在！！");
     log.error("check ....." + " ==> " + zipFilePath + " 文件不存在 !!")
+  } else {
+    log.info("check ....." + " ==> " + zipFilePath +  " 文件存在 !!")
   }
-  log.info("check ....." + " ==> " + zipFilePath +  " 文件存在 !!")
   return exist
 };
 
@@ -373,6 +388,79 @@ window.clear_upgrade_packege = function(zipFilePath) {
 // 以下代码来自于互联网，具体出处已经不记得了；
 async function sleep_and_await(ms) {
   return new Promise(resolve => setTimeout(() => resolve(), ms));
+};
+
+
+// 检查升级失败的次数 是否大于 阈值
+window.check_upgrade_fail_number = function() {
+  // const config = window.require("./config.json");
+  var configFile = path.join(__dirname, "config.json")
+  let config = fs.readFileSync(configFile);
+  config = JSON.parse(config)
+  if (config.length == 0) {
+    config.fail.number = 1;
+    config.fail.threshold = 2;
+    config.fail.message = "连续升级失败，请联系公司运维人员！！";
+  } else {
+    config.fail.number = config.fail.number + 1;
+  }
+  fail_number = config.fail.number;
+  if (fail_number > config.fail.threshold) {
+    return config.fail.message;
+  } else {
+    try {
+      fs.writeFileSync(configFile, JSON.stringify(config));
+      log.info("记录升级失败次数成功！！");
+    } catch (error) {
+      log.info("记录升级失败次数失败！！");
+      return "记录升级失败次数失败！！";
+    }
+  }
+  return "";
+}
+
+// 升级成功后修改升级失败的次数
+window.upgrade_success_update_number = function() {
+  // const config = window.require("./config.json");
+  var configFile = path.join(__dirname, "config.json")
+  let config = fs.readFileSync(configFile);
+  config = JSON.parse(config)
+  if (config.length == 0) {
+    config.fail.number = 0;
+    config.fail.threshold = 2;
+    config.fail.message = "连续升级失败，请联系公司运维人员！！";
+  } else {
+    config.fail.number = 0;
+  }
+  try {
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    log.info("记录升级成功后修改记录成功！！");
+    return "";
+  } catch (error) {
+    log.info("记录升级成功后修改记录失败！！");
+    return "记录升级成功后修改记录失败！！";
+  }
+}
+
+window.upgrade_fail_message = function() {
+  // const config = window.require("./config.json");
+  
+  var configFile = path.join(__dirname, "config.json")
+  let config = fs.readFileSync(configFile);
+  config = JSON.parse(config)
+  if (config.length == 0) {
+    return "连续升级失败，请联系公司运维人员！！";
+  }
+  return config.fail.message;
+}
+
+
+window.checkout = function(number) {
+  log.info('index.... ===> number:' + number)
+  layui.use('element', function() {
+    element = layui.element;
+    element.progress('demo', number+'%');
+  });
 };
 
 

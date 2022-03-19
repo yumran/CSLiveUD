@@ -44,13 +44,28 @@
       function init() {
         // 初始化内容 
         var url = document.location.href;
-        var flag = url.split('=')[1];
+        var flag = url.split('=')[1].split('&')[0];
+        var msg = url.split('=')[2];
         if (flag == 'success') {
           document.getElementById("up_success").style.display = 'block';
+          if (msg.length != 0) {
+            async_alert();
+          }
         } else {
           document.getElementById("up_fail").style.display = "block";
+          if (msg.length != 0) {
+            async_alert();
+          }
         }
       };
+
+      function async_alert() { // 初始化 && 控制流程
+        setTimeout(alert_alert, 200);
+      }
+
+      function alert_alert() {
+        alert(upgrade_fail_message(),()=>{})
+      }
     </script>
   </body>
 </html>

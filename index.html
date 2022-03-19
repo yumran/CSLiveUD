@@ -56,6 +56,7 @@
       function load() {
         //页面加载
         upgrade_result = true;
+        upgrade_success = false;
         upgrade_progress = 0;
         upgrade_flag_number = 0;
         log.info("install page init .....")
@@ -73,28 +74,34 @@
             rollback_controller();
             clearInterval(progressInterval);
             log.info("install page setInterval ....." + " ===> end !!")
-            sleepFun(fun("./src/next_bak.html?flag=fail"), 2000);
+            var msg = check_upgrade_fail_number();
+            sleepFun(fun("./src/next_bak.html?flag=fail&msg=" + msg), 2000);
             log.info("upgrade fail !!")
           } else {
+            log.info("install page setInterval ....." + " ===> progress:" + upgrade_progress)
             if (upgrade_progress < 100) {
-              log.info("install page setInterval ....." + " ===> progress:" + upgrade_progress)
-              var temp = upgrade_progress + Math.floor((Math.random()*10)+1);
+              var temp = upgrade_progress + Math.floor((Math.random()*2)+1);
               if (temp < 100) {
                 upgrade_progress = temp
                 element.progress('demo', upgrade_progress+'%');
               }
+
+              if (upgrade_success && upgrade_progress == 99) {
+                upgrade_progress = 100;
+              }
             } else {
               log.info("install page setInterval ....." + " ===> progress:" + upgrade_progress)
-              element.progress('demo', upgrade_progress+'%');
+              element.progress('demo', 100+'%');
               clearInterval(progressInterval);
+              var msg = upgrade_success_update_number();
               log.info("install page setInterval ....." + " ===> end !!")
-              sleepFun(fun("./src/next_bak.html?flag=success"), 2000);
+              sleepFun(fun("./src/next_bak.html?flag=success&msg=" + msg), 2000);
               log.info("upgrade success !!")
             }
           }
-        }, 2000);
+        }, 100);
       });
-
+      
 
       // async function async_init_controller() { // 初始化 && 控制流程
       //   await init_controller();
