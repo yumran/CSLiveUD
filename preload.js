@@ -66,6 +66,13 @@ window.init_controller = function() {
   log.info("init controller ..... " + " ===> dirname:" + path.join(__dirname))
   log.info("init controller ..... " + " ===> download args:" + remote.process.argv)
   log.info("init controller ..... " + " ===> download path:" + app.getPath("downloads"))
+
+  // register is 1
+  var regRes = action_register(1, 1)
+  if (!regRes) {
+    return
+  }
+
   // var argv1 = remote.process.argv[app.isPackaged ? 1 : 2];
   if (remote.process.argv.length == (app.isPackaged ? 1 : 2)) {
     // 未通知升级包的绝对路径 && 默认客户端
@@ -95,7 +102,7 @@ window.init_controller = function() {
  */
 window.rollback_controller = function() {
   log.info("rollback controller ..... ")
-  if (upgrade_flag_number >= 4) {
+  if (upgrade_flag_number >= 3 && upgrade_flag_number < 6) {
     // 1、执行卸载脚本
     if (!uninstall_original_program('uninstall.exe', 2)) {
       return false;
@@ -130,7 +137,7 @@ window.rollback_controller = function() {
 // 2、正式的升级逻辑
 window.upgrade = function(zipFilePath, systemType) {
   // 1、检测升级包是否存在
-  if (!check_upgrade_package(zipFilePath, systemType)) {
+  if (!action_register(1, 2) || !check_upgrade_package(zipFilePath, systemType)) {
     return false;
   }
   upgrade_flag_number = 1;
@@ -142,7 +149,7 @@ window.upgrade = function(zipFilePath, systemType) {
   }
   
   // 2、卸载原程序
-  if (!uninstall_original_program('uninstall.exe', 2)) {
+  if (!action_register(1, 3) || !uninstall_original_program('uninstall.exe', 2)) {
     return false;
   }
   upgrade_flag_number = 2;
@@ -154,7 +161,7 @@ window.upgrade = function(zipFilePath, systemType) {
   }
 
   // 3、备份原程序
-  if (!backup_source_program(systemType)) {
+  if (!action_register(1, 4) || !backup_source_program(systemType)) {
     return false;
   }
   upgrade_flag_number = 3;
@@ -163,7 +170,7 @@ window.upgrade = function(zipFilePath, systemType) {
   log.info("flag num:" + upgrade_flag_number + " ===> backup source program end !!")
 
   // 4、解压升级包 && 覆盖原程序
-  if (!unzip_upgrade_package(zipFilePath, systemType)) {
+  if (!action_register(1, 5) || !unzip_upgrade_package(zipFilePath, systemType)) {
     return false;
   }
   upgrade_flag_number = 4;
@@ -172,7 +179,7 @@ window.upgrade = function(zipFilePath, systemType) {
   log.info("flag num:" + upgrade_flag_number + " ===> unzip upgrade package end !!")
 
   // 5、安装升级程序
-  if (!install_upgrade_program('install.exe', 7)) {
+  if (!action_register(1, 6) || !install_upgrade_program('install.exe', 7)) {
     return false;
   }
   upgrade_flag_number = 5;
@@ -184,7 +191,7 @@ window.upgrade = function(zipFilePath, systemType) {
   }
 
   // 6、清理升级包
-  if (!clear_upgrade_packege(zipFilePath)) {
+  if (!action_register(1, 0) || !clear_upgrade_packege(zipFilePath)) {
     return false;
   }
   upgrade_flag_number = 6;
@@ -381,6 +388,33 @@ window.clear_upgrade_packege = function(zipFilePath) {
   console.log("clear ....." + " ===> " + zipFilePath);
   command = "del " + zipFilePath;
   return execute_script(command);
+}
+
+
+
+/**
+ * 操作注册表
+ * @param {*} zipFilePath 
+ */
+window.action_register = function(act, mark) {
+  log.info("action register .....")
+  log.info("action register ....." + " ===> act:" + act + ", mark:" + mark);
+
+  const app = remote.app
+  let registerAction = path.join(app.getAppPath(), '../../', "registryAction.exe")
+  log.info("action register ....." + " ===> registerAction:" + registerAction)
+  var exist = fs.existsSync(registerAction);
+  if (!exist) {
+    log.info("action register ....." + " ==> " + registerAction + " 文件不存在！！")
+    return false;
+  }
+  log.info("action register ....." + " ==> " + registerAction + " 文件存在！！")
+
+  let bat = spawnSync('cmd.exe', ['/c', registerAction, act, mark]);
+  if (bat.status != 0) {
+    return false;
+  }
+  return true;
 }
 
 
