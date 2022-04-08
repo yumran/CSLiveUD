@@ -57,6 +57,9 @@
             async_alert();
           }
         }
+
+        // 修改注册表 升级进程完成的标记
+        action_register(7, 0)
       };
 
       function async_alert() { // 初始化 && 控制流程

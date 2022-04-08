@@ -68,8 +68,7 @@ window.init_controller = function() {
   log.info("init controller ..... " + " ===> download path:" + app.getPath("downloads"))
 
   // register is 1
-  var regRes = action_register(1, 1)
-  if (!regRes) {
+  if (!action_register(1, 1) || !action_register(7, 1)) {
     return
   }
 
